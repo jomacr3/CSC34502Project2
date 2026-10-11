@@ -20,7 +20,7 @@ static int valid_values(const int values[SIZE]) {
     for (int i = 0; i < SIZE; ++i) {
         int value = values[i];
         if (value < 1 || value > SIZE || seen[value]) return 0;
-        seen[value] = 1;
+            seen[value] = 1;
     }
     return 1;
 }
