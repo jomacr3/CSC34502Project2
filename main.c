@@ -13,6 +13,8 @@ typedef struct { CheckKind kind; int index; int result_index; } ThreadData;
 static int board[SIZE][SIZE];
 static int results[MAX_THREADS];
 
+//return 1 if the nine supplied values contain each number from 1 through 9 exactly once 
+//return 0 if a value is out of range or appears more than once
 static int valid_values(const int values[SIZE]) {
     int seen[SIZE + 1] = {0};
     for (int i = 0; i < SIZE; ++i) {
@@ -35,11 +37,12 @@ static void *check_worker(void *arg) {
         for (int r = 0; r < SIZE; ++r) values[r] = board[r][d->index];
         valid = valid_values(values);
     } else if (d->kind == CHECK_ALL_COLUMNS) {
+        //Option 1: this single thread checks all nine columns in turn
         for (int c = 0; c < SIZE && valid; ++c) {
             for (int r = 0; r < SIZE; ++r) values[r] = board[r][c];
             valid = valid_values(values);
         }
-    } else { /* one 3x3 subgrid */
+    } else { //one 3x3 subgrid 
         int k = 0;
         int start_row = (d->index / 3) * 3;
         int start_col = (d->index % 3) * 3;
@@ -53,6 +56,7 @@ static void *check_worker(void *arg) {
     return NULL;
 }
 
+//read the board from input.txt return 1 on success and 0 if the file cannot be read or does not contain exactly 81 integers
 static int read_board(void) {
     FILE *file = fopen("input.txt", "r");
     if (!file) return 0;
@@ -64,7 +68,7 @@ static int read_board(void) {
             }
         }
     }
-    /* Require exactly 81 integers; trailing whitespace is fine. */
+    //require exactly 81 integers; trailing whitespace is fine
     int extra;
     if (fscanf(file, "%d", &extra) == 1) {
         fclose(file);
@@ -75,8 +79,10 @@ static int read_board(void) {
 }
 
 int main(int argc, char *argv[]) {
+    //require exactly one argument, either the string "1" or the string "2"
     if (argc != 2 || (strcmp(argv[1], "1") != 0 && strcmp(argv[1], "2") != 0))
         return 1;
+    //load the board before starting timing or creating threads
     if (!read_board()) return 1;
 
     printf("BOARD STATE IN input.txt:\n");
@@ -94,14 +100,14 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < MAX_THREADS; ++i) results[i] = 0;
 
     start = clock();
-    /* Both modes use 9 row checks and 9 subgrid checks. */
+    // Both modes use 9 row checks and 9 subgrid checks
     for (int i = 0; i < SIZE; ++i) {
         data[thread_count] = (ThreadData){CHECK_ROW, i, i};
         if (pthread_create(&threads[thread_count], NULL, check_worker, &data[thread_count]) != 0) return 1;
         ++thread_count;
     }
     if (mode == 1) {
-        /* Option 1: one thread validates all nine columns (19 threads total). */
+        // Option 1: one thread validates all nine columns (19 threads total)
         data[thread_count] = (ThreadData){CHECK_ALL_COLUMNS, 0, 9};
         if (pthread_create(&threads[thread_count], NULL, check_worker, &data[thread_count]) != 0) return 1;
         ++thread_count;
